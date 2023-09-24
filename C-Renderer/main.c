@@ -11,13 +11,14 @@
 #include "triangle.h"
 #include "texture.h"
 #include "mesh.h"
+#include "camera.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Global variables for execution status and game loop
 ///////////////////////////////////////////////////////////////////////////////
 bool is_running = false;
 int previous_frame_time = 0;
-vec3_t camera_position = { 0, 0, 0 };
+float delta_time = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Array to store triangles that should be rendered each frame
@@ -31,6 +32,7 @@ int num_triangles_to_render = 0;
 ///////////////////////////////////////////////////////////////////////////////
 mat4_t world_matrix;
 mat4_t proj_matrix;
+mat4_t view_matrix;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Setup function to initialize variables and game objects
@@ -61,10 +63,10 @@ void setup(void) {
     proj_matrix = mat4_make_perspective(fov, aspect, znear, zfar);
 
     // Loads the vertex and face values for the mesh data structure
-    load_obj_file_data("./assets/efa.obj");
+    load_obj_file_data("./assets/f22.obj");
 
     // Load the texture information from an external PNG file
-    load_png_texture_data("./assets/efa.png");
+    load_png_texture_data("./assets/f22.png");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,29 +76,45 @@ void process_input(void) {
     SDL_Event event;
     SDL_PollEvent(&event);
     switch (event.type) {
-        case SDL_QUIT:
+    case SDL_QUIT:
+        is_running = false;
+        break;
+    case SDL_KEYDOWN:
+        if (event.key.keysym.sym == SDLK_ESCAPE)
             is_running = false;
-            break;
-        case SDL_KEYDOWN:
-            if (event.key.keysym.sym == SDLK_ESCAPE)
-                is_running = false;
-            if (event.key.keysym.sym == SDLK_1)
-                render_method = RENDER_WIRE_VERTEX;
-            if (event.key.keysym.sym == SDLK_2)
-                render_method = RENDER_WIRE;
-            if (event.key.keysym.sym == SDLK_3)
-                render_method = RENDER_FILL_TRIANGLE;
-            if (event.key.keysym.sym == SDLK_4)
-                render_method = RENDER_FILL_TRIANGLE_WIRE;
-            if (event.key.keysym.sym == SDLK_5)
-                render_method = RENDER_TEXTURED;
-            if (event.key.keysym.sym == SDLK_6)
-                render_method = RENDER_TEXTURED_WIRE;
-            if (event.key.keysym.sym == SDLK_c)
-                cull_method = CULL_BACKFACE;
-            if (event.key.keysym.sym == SDLK_d)
-                cull_method = CULL_NONE;
-            break;
+        if (event.key.keysym.sym == SDLK_1)
+            render_method = RENDER_WIRE_VERTEX;
+        if (event.key.keysym.sym == SDLK_2)
+            render_method = RENDER_WIRE;
+        if (event.key.keysym.sym == SDLK_3)
+            render_method = RENDER_FILL_TRIANGLE;
+        if (event.key.keysym.sym == SDLK_4)
+            render_method = RENDER_FILL_TRIANGLE_WIRE;
+        if (event.key.keysym.sym == SDLK_5)
+            render_method = RENDER_TEXTURED;
+        if (event.key.keysym.sym == SDLK_6)
+            render_method = RENDER_TEXTURED_WIRE;
+        if (event.key.keysym.sym == SDLK_c)
+            cull_method = CULL_BACKFACE;
+        if (event.key.keysym.sym == SDLK_x)
+            cull_method = CULL_NONE;
+        if (event.key.keysym.sym == SDLK_UP)
+            camera.position.y += 3.0 * delta_time;
+        if (event.key.keysym.sym == SDLK_DOWN)
+            camera.position.y -= 3.0 * delta_time;
+        if (event.key.keysym.sym == SDLK_a)
+            camera.yaw_angle -= 1.0 * delta_time;
+        if (event.key.keysym.sym == SDLK_d)
+            camera.yaw_angle += 1.0 * delta_time;
+        if (event.key.keysym.sym == SDLK_w) {
+            camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
+            camera.position = vec3_add(camera.position, camera.forward_velocity);
+        }
+        if (event.key.keysym.sym == SDLK_s) {
+            camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
+            camera.position = vec3_sub(camera.position, camera.forward_velocity);
+        }
+        break;
     }
 }
 
@@ -112,16 +130,31 @@ void update(void) {
         SDL_Delay(time_to_wait);
     }
 
+    // Get a delta time factor converted to seconds to be used to update our game objects.
+    delta_time = (SDL_GetTicks() - previous_frame_time) / 1000.0;
+
     previous_frame_time = SDL_GetTicks();
 
     // Initialize the counter of triangles to render for the current frame
     num_triangles_to_render = 0;
 
-    // Change the mesh scale, rotation, and translation values per animation frame
-    mesh.rotation.x += 0.006;
-    mesh.rotation.y += 0.000;
-    mesh.rotation.z += 0.000;
-    mesh.translation.z = 4.0;
+    // Change the mesh scale, rotation, and translation values per second
+    mesh.rotation.x += 0.0 * delta_time;
+    mesh.rotation.y += 0.0 * delta_time;
+    mesh.rotation.z += 0.0 * delta_time;
+    mesh.translation.z = 5.0;
+
+    vec3_t up_direction = { 0, 1, 0 };
+
+    // Initialize the target
+    vec3_t target = { 0, 0 , 1 };
+    mat4_t camera_yaw_rotation = mat4_make_rotation_y(camera.yaw_angle);
+    camera.direction = vec3_from_vec4(mat4_mul_vec4(camera_yaw_rotation, vec4_from_vec3(target)));
+    // Offset the camera position in the direction where the camera is pointing at
+
+    target = vec3_add(camera.position, camera.direction);
+    // Create the view matrix
+    view_matrix = mat4_look_at(camera.position, target, up_direction);
 
     // Create scale, rotation, and translation matrices that will be used to multiply the mesh vertices
     mat4_t scale_matrix = mat4_make_scale(mesh.scale.x, mesh.scale.y, mesh.scale.z);
@@ -159,6 +192,10 @@ void update(void) {
             // Multiply the world matrix by the original vector
             transformed_vertex = mat4_mul_vec4(world_matrix, transformed_vertex);
 
+            // Multiply the view matrix by the world transformed vector to transform my scene
+            // to camera space.
+            transformed_vertex = mat4_mul_vec4(view_matrix, transformed_vertex);
+
             // Save transformed vertex in the array of transformed vertices
             transformed_vertices[j] = transformed_vertex;
         }
@@ -179,7 +216,8 @@ void update(void) {
         vec3_normalize(&normal);
 
         // Find the vector between vertex A in the triangle and the camera origin
-        vec3_t camera_ray = vec3_sub(camera_position, vector_a);
+        vec3_t origin = { 0, 0, 0 };
+        vec3_t camera_ray = vec3_sub(origin, vector_a);
 
         // Calculate how aligned the camera ray is with the face normal (using dot product)
         float dot_normal_camera = vec3_dot(normal, camera_ray);
@@ -245,7 +283,7 @@ void update(void) {
 void render(void) {
     SDL_RenderClear(renderer);
 
-    draw_grid();
+    //draw_grid();
 
     // Loop all projected triangles and render them
     for (int i = 0; i < num_triangles_to_render; i++) {
