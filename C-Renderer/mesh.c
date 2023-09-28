@@ -56,7 +56,7 @@ void load_cube_mesh_data(void) {
 
 void load_obj_file_data(char* filename) {
     FILE* file;
-    fopen_s(&file,filename, "r");
+    fopen_s(&file, filename, "r");
     char line[1024];
 
     tex2_t* texcoords = NULL;
