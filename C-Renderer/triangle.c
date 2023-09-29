@@ -69,7 +69,7 @@ void draw_triangle_pixel(
     float alpha = weights.x;
     float beta = weights.y;
     float gamma = weights.z;
-    
+
     // Interpolate the value of 1/w for the current pixel
     float interpolated_reciprocal_w = (1 / point_a.w) * alpha + (1 / point_b.w) * beta + (1 / point_c.w) * gamma;
 
@@ -77,12 +77,12 @@ void draw_triangle_pixel(
     interpolated_reciprocal_w = 1.0 - interpolated_reciprocal_w;
 
     // Only draw the pixel if the depth value is less than the one previously stored in the z-buffer
-    if (interpolated_reciprocal_w < z_buffer[(window_width * y) + x]) {
+    if (interpolated_reciprocal_w < get_zbuffer_at(x, y)) {
         // Draw a pixel at position (x,y) with a solid color
         draw_pixel(x, y, color);
 
         // Update the z-buffer value with the 1/w of this current pixel
-        z_buffer[(window_width * y) + x] = interpolated_reciprocal_w;
+        update_zbuffer_at(x, y, interpolated_reciprocal_w);
     }
 }
 
@@ -105,7 +105,7 @@ void draw_triangle_texel(
     float alpha = weights.x;
     float beta = weights.y;
     float gamma = weights.z;
-    
+
     // Variables to store the interpolated values of U, V, and also 1/w for the current pixel
     float interpolated_u;
     float interpolated_v;
@@ -130,12 +130,12 @@ void draw_triangle_texel(
     interpolated_reciprocal_w = 1.0 - interpolated_reciprocal_w;
 
     // Only draw the pixel if the depth value is less than the one previously stored in the z-buffer
-    if (interpolated_reciprocal_w < z_buffer[(window_width * y) + x]) {
+    if (interpolated_reciprocal_w < get_zbuffer_at(x, y)) {
         // Draw a pixel at position (x,y) with the color that comes from the mapped texture
         draw_pixel(x, y, texture[(texture_width * tex_y) + tex_x]);
 
         // Update the z-buffer value with the 1/w of this current pixel
-        z_buffer[(window_width * y) + x] = interpolated_reciprocal_w;
+        update_zbuffer_at(x, y, interpolated_reciprocal_w);
     }
 }
 
