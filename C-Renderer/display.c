@@ -8,8 +8,8 @@ static uint32_t* color_buffer = NULL;
 static float* z_buffer = NULL;
 
 static SDL_Texture* color_buffer_texture = NULL;
-static int window_width = 800;
-static int window_height = 600;
+static int window_width;
+static int window_height;
 
 enum cull_method cull_method = CULL_BACKFACE;
 enum render_method render_method = RENDER_WIRE;
@@ -32,7 +32,7 @@ void set_window_height(int height) {
 
 int get_cull_method(void) {
     return cull_method;
-}
+} 
 
 void set_cull_method(int method) {
     cull_method = method;
@@ -47,35 +47,39 @@ void set_render_method(int method) {
 }
 
 bool should_render_filled_triangles(void) {
-    return render_method == RENDER_FILL_TRIANGLE ||
-        render_method == RENDER_FILL_TRIANGLE_WIRE;
+   return render_method == RENDER_FILL_TRIANGLE ||
+    render_method == RENDER_FILL_TRIANGLE_WIRE;
 }
 
 bool should_render_textured_triangles(void) {
     return render_method == RENDER_TEXTURED ||
-        render_method == RENDER_TEXTURED_WIRE;
+     render_method == RENDER_TEXTURED_WIRE;
 }
 
 bool should_render_triangle_wireframe(void) {
     return render_method == RENDER_WIRE ||
-        render_method == RENDER_WIRE_VERTEX ||
-        render_method == RENDER_FILL_TRIANGLE_WIRE ||
-        render_method == RENDER_TEXTURED_WIRE;
+            render_method == RENDER_WIRE_VERTEX ||
+            render_method == RENDER_FILL_TRIANGLE_WIRE ||
+            render_method == RENDER_TEXTURED_WIRE;
 }
 
 bool should_render_wired_vertex(void) {
     return render_method == RENDER_WIRE_VERTEX;
 }
 
+bool should_cull_backface(void) {
+    return cull_method == CULL_BACKFACE;
+}
+
 float get_zbuffer_at(int x, int y) {
-    if (x < 0 || x >= window_width || y < 0 || y >= window_height) {
+    if(x < 0 || x >= window_width || y < 0 || y >= window_height) {
         return 1.0;
     }
     return z_buffer[(window_width * y) + x];
 }
 
 void update_zbuffer_at(int x, int y, float value) {
-    if (x < 0 || x >= window_width || y < 0 || y >= window_height) {
+    if(x < 0 || x >= window_width || y < 0 || y >= window_height) {
         return;
     }
     z_buffer[(window_width * y) + x] = value;
@@ -90,16 +94,22 @@ bool initialize_window(void) {
     // Set width and height of the SDL window with the max screen resolution
     SDL_DisplayMode display_mode;
     SDL_GetCurrentDisplayMode(0, &display_mode);
-    window_width = display_mode.w * 0.5;
-    window_height = display_mode.h * 0.5;
+    int fullscreen_width = display_mode.w;
+    int fullscreen_height = display_mode.h;
+
+    //This values are used across the entire application and for initilizing
+    //my color buffer and z buffer. If you divide these by the same value, you
+    //preserve aspect ratio and achieve a retro effect.
+    window_width = fullscreen_width / 4.0;
+    window_height = fullscreen_height / 4.0;
 
     // Create a SDL Window
     window = SDL_CreateWindow(
         NULL,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        window_width,
-        window_height,
+        fullscreen_width,
+        fullscreen_height,
         SDL_WINDOW_BORDERLESS
     );
     if (!window) {
@@ -188,13 +198,13 @@ void render_color_buffer(void) {
 
 void clear_color_buffer(uint32_t color) {
     for (int i = 0; i < window_width * window_height; i++) {
-        color_buffer[i] = color;
+            color_buffer[i] = color;
     }
 }
 
 void clear_z_buffer(void) {
     for (int i = 0; i < window_width * window_height; i++) {
-        z_buffer[i] = 1.0;
+        z_buffer[i] = 1.0; 
     }
 }
 
